@@ -28,19 +28,20 @@ const ProtectedPatronRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const ProtectedVendeurRoute = ({ children }: { children: React.ReactNode }) => {
+const VendeurRoute = () => {
   const { user, loading, userRole } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Chargement...</p></div>;
-  if (!user) return <Navigate to="/caisse/login" replace />;
-  return <>{children}</>;
+  if (!user) return <VendeurAuth />;
+  if (userRole === 'patron') return <Navigate to="/dashboard" replace />;
+  return <CaissePage />;
 };
 
-const AuthRedirect = ({ to }: { to: string }) => {
+const AuthRedirect = () => {
   const { user, loading, userRole } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Chargement...</p></div>;
   if (user && userRole === 'patron') return <Navigate to="/dashboard" replace />;
   if (user && userRole === 'vendeur') return <Navigate to="/caisse" replace />;
-  return to === 'patron' ? <PatronAuth /> : <VendeurAuth />;
+  return <PatronAuth />;
 };
 
 const App = () => (
@@ -51,8 +52,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<AuthRedirect to="patron" />} />
-            <Route path="/caisse/login" element={<AuthRedirect to="vendeur" />} />
+            <Route path="/" element={<AuthRedirect />} />
+            <Route path="/caisse" element={<VendeurRoute />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route path="/dashboard" element={<ProtectedPatronRoute><DashboardLayout /></ProtectedPatronRoute>}>
