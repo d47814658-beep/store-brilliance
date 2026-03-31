@@ -66,7 +66,7 @@ const App = () => (
               <Route path="alerts" element={<AlertsPage />} />
             </Route>
 
-            <Route path="/caisse" element={<ProtectedVendeurRoute><CaissePage /></ProtectedVendeurRoute>} />
+            
 
             <Route path="*" element={<NotFound />} />
           </Routes>
