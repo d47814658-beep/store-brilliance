@@ -7,7 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { History, XCircle } from 'lucide-react';
+import { History, XCircle, FileText } from 'lucide-react';
+import InvoicePDF, { InvoiceData } from '@/components/InvoicePDF';
+import { pdf } from '@react-pdf/renderer';
 
 const SalesPage = () => {
   const { store } = useAuth();
@@ -67,6 +69,37 @@ const SalesPage = () => {
     }
   };
 
+  const downloadSalePDF = async (sale: any) => {
+    // Fetch sale items
+    const { data: items } = await supabase
+      .from('sale_items')
+      .select('product_name, quantity, unit_price, total_price')
+      .eq('sale_id', sale.id);
+
+    const invoiceData: InvoiceData = {
+      invoiceNumber: sale.invoice_number,
+      storeName: store?.name || '',
+      vendeurName: sale.profiles?.full_name || '—',
+      date: formatDate(sale.created_at),
+      items: (items || []).map(i => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        unit_price: Number(i.unit_price),
+        total_price: Number(i.total_price),
+      })),
+      totalAmount: Number(sale.total_amount),
+      status: sale.status,
+    };
+
+    const blob = await pdf(<InvoicePDF data={invoiceData} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${sale.invoice_number}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <div className="mb-6">
@@ -100,11 +133,16 @@ const SalesPage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {sale.status === 'completed' && (
-                      <Button variant="ghost" size="sm" onClick={() => cancelSale(sale)}>
-                        <XCircle className="h-4 w-4 mr-1" /> Annuler
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => downloadSalePDF(sale)}>
+                        <FileText className="h-4 w-4 mr-1" /> PDF
                       </Button>
-                    )}
+                      {sale.status === 'completed' && (
+                        <Button variant="ghost" size="sm" onClick={() => cancelSale(sale)}>
+                          <XCircle className="h-4 w-4 mr-1" /> Annuler
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

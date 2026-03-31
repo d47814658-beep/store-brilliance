@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { formatCFA } from '@/lib/formatters';
+import { formatCFA, formatDate } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Check, LogOut, History } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Check, LogOut, History, FileText, Download, Share2, X } from 'lucide-react';
+import InvoicePDF, { InvoiceData } from '@/components/InvoicePDF';
+import { pdf } from '@react-pdf/renderer';
 
 interface CartItem {
   product_id: string;
@@ -30,6 +32,7 @@ const CaissePage = () => {
   const [processing, setProcessing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [todaySales, setTodaySales] = useState<any[]>([]);
+  const [lastInvoice, setLastInvoice] = useState<InvoiceData | null>(null);
 
   useEffect(() => {
     if (!store) return;
@@ -170,6 +173,22 @@ const CaissePage = () => {
         }
       }
 
+      // Build invoice data for PDF
+      const invoiceData: InvoiceData = {
+        invoiceNumber: invoiceNum,
+        storeName: store!.name,
+        vendeurName: profile?.full_name || 'Vendeur',
+        date: formatDate(new Date()),
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.unit_price * item.quantity,
+        })),
+        totalAmount: cartTotal,
+      };
+      setLastInvoice(invoiceData);
+
       toast({ title: 'Vente validée !', description: `Facture ${invoiceNum}` });
       setCart([]);
 
@@ -185,6 +204,27 @@ const CaissePage = () => {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const downloadInvoicePDF = async (invoiceData: InvoiceData) => {
+    const blob = await pdf(<InvoicePDF data={invoiceData} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoiceData.invoiceNumber}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareInvoiceWhatsApp = async (invoiceData: InvoiceData) => {
+    const blob = await pdf(<InvoicePDF data={invoiceData} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    // Open in new tab for viewing, then share link
+    window.open(url, '_blank');
+    const text = encodeURIComponent(
+      `Facture ${invoiceData.invoiceNumber}\n${invoiceData.storeName}\nTotal: ${formatCFA(invoiceData.totalAmount)}`
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
   const handleSignOut = async () => {
@@ -255,6 +295,38 @@ const CaissePage = () => {
             <p className="text-center text-muted-foreground py-8">Aucune vente aujourd'hui</p>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // Invoice modal after sale
+  if (lastInvoice) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="pt-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-4">
+                <Check className="h-8 w-8 text-success" />
+              </div>
+              <h2 className="text-xl font-heading font-bold">Vente validée !</h2>
+              <p className="text-muted-foreground text-sm mt-1">Facture {lastInvoice.invoiceNumber}</p>
+              <p className="text-2xl font-heading font-bold mt-3">{formatCFA(lastInvoice.totalAmount)}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Button className="w-full" onClick={() => downloadInvoicePDF(lastInvoice)}>
+                <Download className="h-4 w-4 mr-2" /> Télécharger la facture PDF
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => shareInvoiceWhatsApp(lastInvoice)}>
+                <Share2 className="h-4 w-4 mr-2" /> Partager via WhatsApp
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={() => setLastInvoice(null)}>
+                <X className="h-4 w-4 mr-2" /> Nouvelle vente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
