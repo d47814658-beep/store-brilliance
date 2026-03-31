@@ -8,7 +8,7 @@ import {
   ArrowLeftRight, AlertTriangle, LogOut, Store, Menu, X
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const DashboardLayout = () => {
   const { store, signOut, profile } = useAuth();
