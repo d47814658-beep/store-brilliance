@@ -32,6 +32,7 @@ const CaissePage = () => {
   const [processing, setProcessing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [todaySales, setTodaySales] = useState<any[]>([]);
+  const [lastInvoice, setLastInvoice] = useState<InvoiceData | null>(null);
 
   useEffect(() => {
     if (!store) return;
