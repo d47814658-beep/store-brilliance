@@ -299,6 +299,38 @@ const CaissePage = () => {
     );
   }
 
+  // Invoice modal after sale
+  if (lastInvoice) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="pt-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-4">
+                <Check className="h-8 w-8 text-success" />
+              </div>
+              <h2 className="text-xl font-heading font-bold">Vente validée !</h2>
+              <p className="text-muted-foreground text-sm mt-1">Facture {lastInvoice.invoiceNumber}</p>
+              <p className="text-2xl font-heading font-bold mt-3">{formatCFA(lastInvoice.totalAmount)}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Button className="w-full" onClick={() => downloadInvoicePDF(lastInvoice)}>
+                <Download className="h-4 w-4 mr-2" /> Télécharger la facture PDF
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => shareInvoiceWhatsApp(lastInvoice)}>
+                <Share2 className="h-4 w-4 mr-2" /> Partager via WhatsApp
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={() => setLastInvoice(null)}>
+                <X className="h-4 w-4 mr-2" /> Nouvelle vente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
