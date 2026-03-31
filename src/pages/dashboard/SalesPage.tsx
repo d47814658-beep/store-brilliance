@@ -133,11 +133,16 @@ const SalesPage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {sale.status === 'completed' && (
-                      <Button variant="ghost" size="sm" onClick={() => cancelSale(sale)}>
-                        <XCircle className="h-4 w-4 mr-1" /> Annuler
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => downloadSalePDF(sale)}>
+                        <FileText className="h-4 w-4 mr-1" /> PDF
                       </Button>
-                    )}
+                      {sale.status === 'completed' && (
+                        <Button variant="ghost" size="sm" onClick={() => cancelSale(sale)}>
+                          <XCircle className="h-4 w-4 mr-1" /> Annuler
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
