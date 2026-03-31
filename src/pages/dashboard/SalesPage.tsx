@@ -7,7 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { History, XCircle } from 'lucide-react';
+import { History, XCircle, FileText } from 'lucide-react';
+import InvoicePDF, { InvoiceData } from '@/components/InvoicePDF';
+import { pdf } from '@react-pdf/renderer';
 
 const SalesPage = () => {
   const { store } = useAuth();
