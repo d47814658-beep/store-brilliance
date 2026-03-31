@@ -69,6 +69,37 @@ const SalesPage = () => {
     }
   };
 
+  const downloadSalePDF = async (sale: any) => {
+    // Fetch sale items
+    const { data: items } = await supabase
+      .from('sale_items')
+      .select('product_name, quantity, unit_price, total_price')
+      .eq('sale_id', sale.id);
+
+    const invoiceData: InvoiceData = {
+      invoiceNumber: sale.invoice_number,
+      storeName: store?.name || '',
+      vendeurName: sale.profiles?.full_name || '—',
+      date: formatDate(sale.created_at),
+      items: (items || []).map(i => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        unit_price: Number(i.unit_price),
+        total_price: Number(i.total_price),
+      })),
+      totalAmount: Number(sale.total_amount),
+      status: sale.status,
+    };
+
+    const blob = await pdf(<InvoicePDF data={invoiceData} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${sale.invoice_number}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <div className="mb-6">
