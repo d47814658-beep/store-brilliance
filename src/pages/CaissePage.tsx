@@ -206,6 +206,27 @@ const CaissePage = () => {
     }
   };
 
+  const downloadInvoicePDF = async (invoiceData: InvoiceData) => {
+    const blob = await pdf(<InvoicePDF data={invoiceData} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoiceData.invoiceNumber}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareInvoiceWhatsApp = async (invoiceData: InvoiceData) => {
+    const blob = await pdf(<InvoicePDF data={invoiceData} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    // Open in new tab for viewing, then share link
+    window.open(url, '_blank');
+    const text = encodeURIComponent(
+      `Facture ${invoiceData.invoiceNumber}\n${invoiceData.storeName}\nTotal: ${formatCFA(invoiceData.totalAmount)}`
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/caisse');
