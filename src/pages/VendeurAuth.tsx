@@ -243,12 +243,6 @@ const VendeurAuth = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Vous êtes patron ?{' '}
-          <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/')}>
-            Espace patron
-          </Button>
-        </p>
       </div>
     </div>
   );

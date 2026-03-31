@@ -200,12 +200,6 @@ const PatronAuth = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Vous êtes vendeur ?{' '}
-          <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/caisse')}>
-            Accéder à la caisse
-          </Button>
-        </p>
       </div>
     </div>
   );
