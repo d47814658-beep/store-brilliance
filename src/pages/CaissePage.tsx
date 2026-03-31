@@ -173,6 +173,22 @@ const CaissePage = () => {
         }
       }
 
+      // Build invoice data for PDF
+      const invoiceData: InvoiceData = {
+        invoiceNumber: invoiceNum,
+        storeName: store!.name,
+        vendeurName: profile?.full_name || 'Vendeur',
+        date: formatDate(new Date()),
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.unit_price * item.quantity,
+        })),
+        totalAmount: cartTotal,
+      };
+      setLastInvoice(invoiceData);
+
       toast({ title: 'Vente validée !', description: `Facture ${invoiceNum}` });
       setCart([]);
 
