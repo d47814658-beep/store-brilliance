@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { formatCFA } from '@/lib/formatters';
+import { formatCFA, formatDate } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Check, LogOut, History } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Check, LogOut, History, FileText, Download, Share2, X } from 'lucide-react';
+import InvoicePDF, { InvoiceData } from '@/components/InvoicePDF';
+import { pdf } from '@react-pdf/renderer';
 
 interface CartItem {
   product_id: string;
