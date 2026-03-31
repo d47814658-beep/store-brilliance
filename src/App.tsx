@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { OfflineSyncBoundary } from "@/components/OfflineSyncBoundary";
 import PatronAuth from "./pages/PatronAuth";
 import VendeurAuth from "./pages/VendeurAuth";
 import ResetPassword from "./pages/ResetPassword";
@@ -51,13 +52,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<AuthRedirect />} />
-            <Route path="/caisse" element={<VendeurRoute />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+          <OfflineSyncBoundary>
+            <Routes>
+              <Route path="/" element={<AuthRedirect />} />
+              <Route path="/caisse" element={<VendeurRoute />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            <Route path="/dashboard" element={<ProtectedPatronRoute><DashboardLayout /></ProtectedPatronRoute>}>
-              <Route index element={<DashboardOverview />} />
+              <Route path="/dashboard" element={<ProtectedPatronRoute><DashboardLayout /></ProtectedPatronRoute>}>
+                <Route index element={<DashboardOverview />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="vendeurs" element={<VendeursPage />} />
@@ -68,8 +70,8 @@ const App = () => (
 
             
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </OfflineSyncBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

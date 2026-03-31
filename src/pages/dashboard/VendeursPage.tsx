@@ -13,6 +13,7 @@ const VendeursPage = () => {
   const { store } = useAuth();
   const { toast } = useToast();
   const [vendeurs, setVendeurs] = useState<any[]>([]);
+  const [dailySales, setDailySales] = useState<Record<string, number>>({});
 
   const fetch = async () => {
     if (!store) return;
@@ -23,6 +24,23 @@ const VendeursPage = () => {
       .neq('user_id', store.owner_id)
       .order('full_name');
     setVendeurs(data || []);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { data: sales } = await supabase
+      .from('sales')
+      .select('vendeur_id, total_amount')
+      .eq('store_id', store.id)
+      .gte('created_at', today.toISOString());
+
+    if (sales) {
+      const salesMap: Record<string, number> = {};
+      sales.forEach(sale => {
+        if (!salesMap[sale.vendeur_id]) salesMap[sale.vendeur_id] = 0;
+        salesMap[sale.vendeur_id] += Number(sale.total_amount) || 0;
+      });
+      setDailySales(salesMap);
+    }
   };
 
   useEffect(() => { fetch(); }, [store]);
@@ -64,6 +82,7 @@ const VendeursPage = () => {
               <TableRow>
                 <TableHead>Nom</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Ventes du jour</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -73,6 +92,9 @@ const VendeursPage = () => {
                 <TableRow key={v.id}>
                   <TableCell className="font-medium">{v.full_name}</TableCell>
                   <TableCell className="text-muted-foreground">{v.email}</TableCell>
+                  <TableCell className="font-medium text-success">
+                    {formatCFA(dailySales[v.user_id] || 0)}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(v.status)}>{statusLabel[v.status] || v.status}</Badge>
                   </TableCell>
@@ -89,7 +111,7 @@ const VendeursPage = () => {
               ))}
               {vendeurs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     Aucun vendeur inscrit
                   </TableCell>

@@ -10,6 +10,7 @@ import { ArrowLeftRight } from 'lucide-react';
 const StockMovementsPage = () => {
   const { store } = useAuth();
   const [movements, setMovements] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!store) return;
@@ -21,6 +22,17 @@ const StockMovementsPage = () => {
         .order('created_at', { ascending: false })
         .limit(100);
       setMovements(data || []);
+
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .eq('store_id', store.id);
+      
+      if (profs) {
+        const profMap: Record<string, string> = {};
+        profs.forEach(p => { profMap[p.user_id] = p.full_name; });
+        setProfiles(profMap);
+      }
     };
     fetch();
   }, [store]);
@@ -40,6 +52,7 @@ const StockMovementsPage = () => {
                 <TableHead>Produit</TableHead>
                 <TableHead>Quantité</TableHead>
                 <TableHead>Raison</TableHead>
+                <TableHead>Auteur</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
@@ -53,12 +66,15 @@ const StockMovementsPage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{m.reason}</TableCell>
+                  <TableCell className="font-medium text-sm">
+                    {m.performed_by ? (profiles[m.performed_by] || 'Vendeur inconnu') : 'Système'}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDate(m.created_at)}</TableCell>
                 </TableRow>
               ))}
               {movements.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     <ArrowLeftRight className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     Aucun mouvement enregistré
                   </TableCell>

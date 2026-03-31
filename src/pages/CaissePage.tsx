@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Minus, Trash2, ShoppingCart, Check, LogOut, History, FileText, Download, Share2, X } from 'lucide-react';
 import InvoicePDF, { InvoiceData } from '@/components/InvoicePDF';
 import { pdf } from '@react-pdf/renderer';
+import { cacheProductsLocally, getCachedProducts, cacheCategoriesLocally, getCachedCategories, savePendingSale, updateCachedProductStock } from '@/lib/offlineStore';
 
 interface CartItem {
   product_id: string;
@@ -37,19 +38,33 @@ const CaissePage = () => {
   useEffect(() => {
     if (!store) return;
     const fetchData = async () => {
-      const { data: prods } = await supabase
-        .from('products')
-        .select('*, categories(name)')
-        .eq('store_id', store.id)
-        .order('name');
-      setProducts(prods || []);
+      try {
+        if (navigator.onLine) {
+          const { data: prods } = await supabase
+            .from('products')
+            .select('*, categories(name)')
+            .eq('store_id', store.id)
+            .order('name');
+          setProducts(prods || []);
+          if (prods) await cacheProductsLocally(prods);
 
-      const { data: cats } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('store_id', store.id)
-        .order('name');
-      setCategories(cats || []);
+          const { data: cats } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('store_id', store.id)
+            .order('name');
+          setCategories(cats || []);
+          if (cats) await cacheCategoriesLocally(cats);
+        } else {
+          const localProds = await getCachedProducts();
+          const localCats = await getCachedCategories();
+          setProducts(localProds || []);
+          setCategories(localCats || []);
+          toast({ title: 'Mode hors ligne', description: 'Données chargées depuis le cache local.' });
+        }
+      } catch (err) {
+        console.error("Erreur de chargement", err);
+      }
     };
     fetchData();
   }, [store]);
@@ -122,58 +137,83 @@ const CaissePage = () => {
     if (cart.length === 0) return;
     setProcessing(true);
     try {
-      // Generate invoice number
-      const { data: invoiceNum } = await supabase.rpc('generate_invoice_number', { _store_id: store!.id });
+      let invoiceNum = `INV-OFF-${Math.floor(Math.random() * 100000)}`;
 
-      // Create sale
-      const { data: sale, error: saleError } = await supabase
-        .from('sales')
-        .insert({
+      if (navigator.onLine) {
+        try {
+          const { data: generatedNum } = await supabase.rpc('generate_invoice_number', { _store_id: store!.id });
+          if (generatedNum) invoiceNum = generatedNum;
+        } catch (e) {
+          // Ignorer si l'rpc échoue, on garde le numéro généré aléatoirement
+        }
+
+        const { data: sale, error: saleError } = await supabase
+          .from('sales')
+          .insert({
+            store_id: store!.id,
+            vendeur_id: user!.id,
+            invoice_number: invoiceNum,
+            total_amount: cartTotal,
+            status: 'completed',
+          })
+          .select()
+          .single();
+        if (saleError) throw saleError;
+
+        for (const item of cart) {
+          await supabase.from('sale_items').insert({
+            sale_id: sale.id,
+            product_id: item.product_id,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.unit_price * item.quantity,
+          });
+
+          const { data: product } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', item.product_id)
+            .single();
+
+          if (product) {
+            await supabase
+              .from('products')
+              .update({ stock: product.stock - item.quantity })
+              .eq('id', item.product_id);
+
+            await supabase.from('stock_movements').insert({
+              store_id: store!.id,
+              product_id: item.product_id,
+              quantity: -item.quantity,
+              reason: `Vente ${invoiceNum}`,
+              performed_by: user!.id,
+            });
+          }
+        }
+        
+        toast({ title: 'Vente validée \!', description: `Facture ${invoiceNum}` });
+      } else {
+        // MODE HORS LIGNE
+        const pendingSale = {
+          id: crypto.randomUUID(),
           store_id: store!.id,
           vendeur_id: user!.id,
           invoice_number: invoiceNum,
           total_amount: cartTotal,
-          status: 'completed',
-        })
-        .select()
-        .single();
-      if (saleError) throw saleError;
-
-      // Create sale items and update stock
-      for (const item of cart) {
-        await supabase.from('sale_items').insert({
-          sale_id: sale.id,
-          product_id: item.product_id,
-          product_name: item.name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.unit_price * item.quantity,
-        });
-
-        // Decrement stock
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product_id)
-          .single();
-
-        if (product) {
-          await supabase
-            .from('products')
-            .update({ stock: product.stock - item.quantity })
-            .eq('id', item.product_id);
-
-          await supabase.from('stock_movements').insert({
-            store_id: store!.id,
-            product_id: item.product_id,
-            quantity: -item.quantity,
-            reason: `Vente ${invoiceNum}`,
-            performed_by: user!.id,
-          });
+          cart: cart,
+          created_at: new Date().toISOString()
+        };
+        await savePendingSale(pendingSale);
+        
+        for (const item of cart) {
+          await updateCachedProductStock(item.product_id, item.quantity);
         }
+        
+        toast({ title: 'Vente enregistrée (Hors ligne)', description: `La facture ${invoiceNum} sera synchronisée plus tard.` });
       }
 
-      // Build invoice data for PDF
+      // Build invoice data for PDF (commum)
       const invoiceData: InvoiceData = {
         invoiceNumber: invoiceNum,
         storeName: store!.name,
@@ -188,17 +228,22 @@ const CaissePage = () => {
         totalAmount: cartTotal,
       };
       setLastInvoice(invoiceData);
-
-      toast({ title: 'Vente validée !', description: `Facture ${invoiceNum}` });
       setCart([]);
 
-      // Refresh products
-      const { data: prods } = await supabase
-        .from('products')
-        .select('*, categories(name)')
-        .eq('store_id', store!.id)
-        .order('name');
-      setProducts(prods || []);
+      // Refresh products (depuis db ou cache)
+      if (navigator.onLine) {
+        const { data: prods } = await supabase
+          .from('products')
+          .select('*, categories(name)')
+          .eq('store_id', store!.id)
+          .order('name');
+        setProducts(prods || []);
+        if (prods) await cacheProductsLocally(prods);
+      } else {
+        const localProds = await getCachedProducts();
+        setProducts(localProds || []);
+      }
+
     } catch (error: any) {
       toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } finally {

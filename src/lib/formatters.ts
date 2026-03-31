@@ -1,9 +1,5 @@
 export const formatCFA = (amount: number): string => {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'decimal',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount) + ' FCFA';
+  return (amount || 0).toLocaleString('en-US').replace(/,/g, ' ') + ' FCFA';
 };
 
 export const formatDate = (date: string | Date): string => {

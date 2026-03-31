@@ -157,10 +157,7 @@ const styles = StyleSheet.create({
 });
 
 const formatCFA = (amount: number): string => {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount) + ' FCFA';
+  return (amount || 0).toLocaleString('en-US').replace(/,/g, ' ') + ' FCFA';
 };
 
 export interface InvoiceItem {
